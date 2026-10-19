@@ -1,0 +1,23 @@
+# Sobe apenas o Postgres. A aplicação Go roda fora do Docker (go run),
+# para o ciclo de desenvolvimento ser mais rápido.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: forms-db
+    environment:
+      POSTGRES_USER: forms
+      POSTGRES_PASSWORD: forms
+      POSTGRES_DB: forms
+    ports:
+      - "5432:5432"
+    volumes:
+      - forms-db-data:/var/lib/postgresql/data
+    # O healthcheck permite "docker compose up --wait" esperar o banco ficar pronto.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forms -d forms"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  forms-db-data:
