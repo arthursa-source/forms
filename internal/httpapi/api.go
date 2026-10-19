@@ -6,9 +6,9 @@
 package httpapi
 
 import (
-	"database/sql"
 	"net/http"
 
+	"github.com/arthursa-source/forms/internal/store"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
@@ -17,7 +17,7 @@ import (
 
 // Server carrega as dependências compartilhadas pelos handlers.
 type Server struct {
-	DB        *sql.DB
+	Store     *store.Store
 	JWTSecret string
 }
 
@@ -31,9 +31,21 @@ func NewRouter(s *Server) (chi.Router, huma.API) {
 	r.Use(corsMiddleware)
 
 	cfg := huma.DefaultConfig("Form Builder API", "1.0.0")
+	// Declarar o esquema aqui faz a spec OpenAPI já sair documentando o
+	// header Authorization: Bearer <token>.
+	cfg.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearerAuth": {
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: "JWT",
+		},
+	}
+
 	api := humachi.New(r, cfg)
+	api.UseMiddleware(s.authMiddleware(api))
 
 	s.registerHealth(api)
+	s.registerAuth(api)
 
 	return r, api
 }

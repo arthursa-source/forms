@@ -22,6 +22,7 @@ import (
 	"github.com/arthursa-source/forms/internal/config"
 	"github.com/arthursa-source/forms/internal/database"
 	"github.com/arthursa-source/forms/internal/httpapi"
+	"github.com/arthursa-source/forms/internal/store"
 )
 
 func main() {
@@ -81,7 +82,7 @@ func cmdRun(args []string) error {
 	}
 	defer db.Close()
 
-	router, _ := httpapi.NewRouter(&httpapi.Server{DB: db, JWTSecret: cfg.JWTSecret})
+	router, _ := httpapi.NewRouter(&httpapi.Server{Store: store.New(db), JWTSecret: cfg.JWTSecret})
 
 	srv := &http.Server{
 		Addr:              cfg.Address,

@@ -27,9 +27,9 @@ func (s *Server) registerHealth(api huma.API) {
 		out := &healthOutput{}
 		out.Body.Status = "ok"
 		out.Body.Database = "ok"
-		if s.DB == nil {
+		if s.Store == nil || s.Store.DB == nil {
 			out.Body.Database = "não configurado"
-		} else if err := s.DB.PingContext(ctx); err != nil {
+		} else if err := s.Store.DB.PingContext(ctx); err != nil {
 			out.Body.Database = "indisponível"
 		}
 		return out, nil
