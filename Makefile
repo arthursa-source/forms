@@ -32,6 +32,14 @@ openapi:
 client: openapi
 	cd web && npm run generate:client
 
+## test: roda os testes unitários do Go
+test:
+	go test ./...
+
+## smoke: testa a API ponta a ponta (precisa do servidor rodando)
+smoke:
+	python3 scripts/smoke.py
+
 ## dev: sobe banco, migra e roda backend + frontend
 dev: db-up migrate
 	@echo "Rode em terminais separados: make run  |  cd web && npm run dev"
@@ -40,4 +48,4 @@ dev: db-up migrate
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /'
 
-.PHONY: db-up db-down migrate migrate-status run openapi client dev help
+.PHONY: db-up db-down migrate migrate-status run test smoke openapi client dev help
