@@ -23,14 +23,14 @@ type answerBody struct {
 type responseBody struct {
 	ID        int64        `json:"id"`
 	CreatedAt time.Time    `json:"createdAt"`
-	Answers   []answerBody `json:"answers"`
+	Answers   []answerBody `json:"answers" nullable:"false"`
 }
 
 type responseListOutput struct {
 	Body struct {
 		FormID    int64          `json:"formId"`
 		Total     int            `json:"total"`
-		Responses []responseBody `json:"responses"`
+		Responses []responseBody `json:"responses" nullable:"false"`
 	}
 }
 

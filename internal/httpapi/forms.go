@@ -21,7 +21,7 @@ type fieldBody struct {
 	Label    string   `json:"label" minLength:"1" maxLength:"200"`
 	Type     string   `json:"type" enum:"text,number,select,checkbox"`
 	Required bool     `json:"required"`
-	Options  []string `json:"options,omitempty" doc:"obrigatório (e só usado) quando type=select"`
+	Options  []string `json:"options,omitempty" nullable:"false" doc:"obrigatório (e só usado) quando type=select"`
 }
 
 type formBody struct {
@@ -31,7 +31,7 @@ type formBody struct {
 	Status      string      `json:"status" enum:"draft,published"`
 	Slug        string      `json:"slug,omitempty" doc:"preenchido quando publicado"`
 	PublicPath  string      `json:"publicPath,omitempty" doc:"caminho público, ex: /f/meu-form-ab12cd34"`
-	Fields      []fieldBody `json:"fields"`
+	Fields      []fieldBody `json:"fields" nullable:"false"`
 	PublishedAt *time.Time  `json:"publishedAt,omitempty"`
 	CreatedAt   time.Time   `json:"createdAt"`
 	UpdatedAt   time.Time   `json:"updatedAt"`
@@ -41,7 +41,7 @@ type formInput struct {
 	Body struct {
 		Title       string      `json:"title" minLength:"1" maxLength:"200"`
 		Description string      `json:"description,omitempty" maxLength:"2000"`
-		Fields      []fieldBody `json:"fields" doc:"definição completa dos campos, na ordem de exibição"`
+		Fields      []fieldBody `json:"fields" nullable:"false" doc:"definição completa dos campos, na ordem de exibição"`
 	}
 }
 
@@ -54,7 +54,7 @@ type formUpdateInput struct {
 	Body   struct {
 		Title       string      `json:"title" minLength:"1" maxLength:"200"`
 		Description string      `json:"description,omitempty" maxLength:"2000"`
-		Fields      []fieldBody `json:"fields"`
+		Fields      []fieldBody `json:"fields" nullable:"false"`
 	}
 }
 
@@ -64,7 +64,7 @@ type formOutput struct {
 
 type formListOutput struct {
 	Body struct {
-		Forms []formBody `json:"forms"`
+		Forms []formBody `json:"forms" nullable:"false"`
 	}
 }
 

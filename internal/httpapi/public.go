@@ -21,7 +21,7 @@ type publicFormBody struct {
 	Slug        string            `json:"slug"`
 	Title       string            `json:"title"`
 	Description string            `json:"description"`
-	Fields      []publicFieldBody `json:"fields"`
+	Fields      []publicFieldBody `json:"fields" nullable:"false"`
 }
 
 type publicFieldBody struct {
@@ -29,7 +29,7 @@ type publicFieldBody struct {
 	Label    string   `json:"label"`
 	Type     string   `json:"type" enum:"text,number,select,checkbox"`
 	Required bool     `json:"required"`
-	Options  []string `json:"options,omitempty"`
+	Options  []string `json:"options,omitempty" nullable:"false"`
 }
 
 type publicFormInput struct {

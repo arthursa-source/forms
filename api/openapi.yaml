@@ -112,9 +112,7 @@ components:
           description: obrigatório (e só usado) quando type=select
           items:
             type: string
-          type:
-            - array
-            - "null"
+          type: array
         required:
           type: boolean
         type:
@@ -147,9 +145,7 @@ components:
         fields:
           items:
             $ref: "#/components/schemas/FieldBody"
-          type:
-            - array
-            - "null"
+          type: array
         id:
           format: int64
           type: integer
@@ -198,9 +194,7 @@ components:
           description: definição completa dos campos, na ordem de exibição
           items:
             $ref: "#/components/schemas/FieldBody"
-          type:
-            - array
-            - "null"
+          type: array
         title:
           maxLength: 200
           minLength: 1
@@ -222,9 +216,7 @@ components:
         forms:
           items:
             $ref: "#/components/schemas/FormBody"
-          type:
-            - array
-            - "null"
+          type: array
       required:
         - forms
       type: object
@@ -244,9 +236,7 @@ components:
         fields:
           items:
             $ref: "#/components/schemas/FieldBody"
-          type:
-            - array
-            - "null"
+          type: array
         title:
           maxLength: 200
           minLength: 1
@@ -290,9 +280,7 @@ components:
         options:
           items:
             type: string
-          type:
-            - array
-            - "null"
+          type: array
         required:
           type: boolean
         type:
@@ -323,9 +311,7 @@ components:
         fields:
           items:
             $ref: "#/components/schemas/PublicFieldBody"
-          type:
-            - array
-            - "null"
+          type: array
         slug:
           type: string
         title:
@@ -342,9 +328,7 @@ components:
         answers:
           items:
             $ref: "#/components/schemas/AnswerBody"
-          type:
-            - array
-            - "null"
+          type: array
         createdAt:
           format: date-time
           type: string
@@ -372,9 +356,7 @@ components:
         responses:
           items:
             $ref: "#/components/schemas/ResponseBody"
-          type:
-            - array
-            - "null"
+          type: array
         total:
           format: int64
           type: integer
