@@ -46,6 +46,7 @@ func NewRouter(s *Server) (chi.Router, huma.API) {
 
 	s.registerHealth(api)
 	s.registerAuth(api)
+	s.registerForms(api)
 
 	return r, api
 }

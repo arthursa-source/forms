@@ -5,6 +5,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"strings"
 )
 
 type Store struct {
@@ -20,4 +21,14 @@ func New(db *sql.DB) *Store {
 var (
 	ErrNotFound = errors.New("não encontrado")
 	ErrConflict = errors.New("já existe")
+	ErrInvalid  = errors.New("dados inválidos")
 )
+
+// isUniqueViolation reconhece o erro 23505 do Postgres (unique_violation).
+func isUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "23505") || strings.Contains(msg, "duplicate key")
+}
