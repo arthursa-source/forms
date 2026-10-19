@@ -14,3 +14,5 @@ web/src/api/schema.d.ts
 
 # sistema
 .DS_Store
+
+# lockfile do npm é commitado; node_modules não

@@ -43,6 +43,8 @@ func run(args []string) error {
 		return cmdRun(args[1:])
 	case "migrate":
 		return cmdMigrate(args[1:])
+	case "openapi":
+		return cmdOpenAPI()
 	case "help", "-h", "--help":
 		usage()
 		return nil
@@ -56,8 +58,9 @@ func usage() {
 	fmt.Fprint(os.Stderr, `uso: server <subcomando> [flags]
 
 subcomandos:
-  run                  sobe o servidor HTTP
+  run                       sobe o servidor HTTP
   migrate [up|down|status]  aplica/desfaz migrations
+  openapi                   imprime a spec OpenAPI 3 (YAML) no stdout
 
 flags (ou env ADDRESS / DATABASE_URL / JWT_SECRET):
   --address        endereço HTTP (padrão localhost:8080)
@@ -108,6 +111,19 @@ func cmdRun(args []string) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+// cmdOpenAPI imprime a spec gerada pelo huma a partir das structs Go.
+// Não precisa de banco: só montamos o roteador para registrar as rotas.
+func cmdOpenAPI() error {
+	_, api := httpapi.NewRouter(&httpapi.Server{})
+
+	spec, err := api.OpenAPI().YAML()
+	if err != nil {
+		return fmt.Errorf("gerando OpenAPI: %w", err)
+	}
+	_, err = os.Stdout.Write(spec)
+	return err
 }
 
 func cmdMigrate(args []string) error {
