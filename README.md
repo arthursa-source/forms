@@ -14,6 +14,8 @@ Criação e publicação de formulários, com backend em Go e frontend React.
 
 - [Pré-requisitos](#pré-requisitos)
 - [Subindo tudo do zero](#subindo-tudo-do-zero)
+  - [Como executar o backend](#como-executar-o-backend)
+  - [Como executar o frontend](#como-executar-o-frontend)
 - [Configuração](#configuração)
 - [Banco de dados e migrations](#banco-de-dados-e-migrations)
 - [Gerando a spec OpenAPI](#gerando-a-spec-openapi)
@@ -60,10 +62,15 @@ cd web && npm install && npm run dev
 # → http://localhost:5173
 ```
 
-`npm run dev` roda `generate:client` antes de subir (script `predev`), então
-o client TypeScript é gerado automaticamente a partir de `api/openapi.yaml`.
+### Como executar o backend
 
-Conferindo o backend:
+```bash
+make db-up      # Postgres via docker-compose
+make migrate    # aplica as migrations
+make run        # go run ./cmd/server run --address=localhost:8080
+```
+
+Conferindo:
 
 ```bash
 curl http://localhost:8080/health
@@ -71,6 +78,19 @@ curl http://localhost:8080/health
 ```
 
 A documentação interativa da API fica em <http://localhost:8080/docs>.
+
+### Como executar o frontend
+
+```bash
+cd web
+npm install
+npm run dev     # → http://localhost:5173
+```
+
+`npm run dev` roda `generate:client` antes de subir (script `predev`), então
+o client TypeScript é gerado automaticamente a partir de `api/openapi.yaml`.
+O backend precisa estar no ar: o Vite faz proxy de `/api` para
+`http://localhost:8080`.
 
 ### Usando a aplicação
 
