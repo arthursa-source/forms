@@ -15,6 +15,22 @@ components:
         - type
         - value
       type: object
+    ConfigOutputBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - https://example.com/schemas/ConfigOutputBody.json
+          format: uri
+          readOnly: true
+          type: string
+        googleAuth:
+          description: true quando o login com Google está configurado
+          type: boolean
+      required:
+        - googleAuth
+      type: object
     CredentialsInputBody:
       additionalProperties: false
       properties:
@@ -461,6 +477,78 @@ info:
   version: 1.0.0
 openapi: 3.1.0
 paths:
+  /auth/google:
+    get:
+      description: Redireciona (302) para a tela de consentimento do Google. Responde 503 quando as credenciais do Google não estão configuradas.
+      operationId: googleLogin
+      responses:
+        "302":
+          description: Found
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Inicia o login com Google
+      tags:
+        - auth
+  /auth/google/callback:
+    get:
+      description: "Redireciona (302) para o frontend com o token no fragmento da URL (#token=...). Em caso de erro, redireciona com #error=..."
+      operationId: googleCallback
+      parameters:
+        - description: código de autorização devolvido pelo Google
+          explode: false
+          in: query
+          name: code
+          schema:
+            description: código de autorização devolvido pelo Google
+            type: string
+        - description: deve bater com o state guardado no cookie
+          explode: false
+          in: query
+          name: state
+          schema:
+            description: deve bater com o state guardado no cookie
+            type: string
+        - description: preenchido quando o usuário recusa o consentimento
+          explode: false
+          in: query
+          name: error
+          schema:
+            description: preenchido quando o usuário recusa o consentimento
+            type: string
+        - in: cookie
+          name: forms_google_oauth
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Found
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Recebe o retorno do Google e emite o JWT
+      tags:
+        - auth
   /auth/login:
     post:
       operationId: login
@@ -532,6 +620,26 @@ paths:
       summary: Cria uma conta de admin
       tags:
         - auth
+  /config:
+    get:
+      description: "Não expõe segredo nenhum: só diz quais formas de login estão disponíveis."
+      operationId: config
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigOutputBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Configuração pública do servidor
+      tags:
+        - system
   /forms:
     get:
       operationId: listForms

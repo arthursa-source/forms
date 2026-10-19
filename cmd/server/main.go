@@ -6,7 +6,8 @@
 //	server migrate [up|down|status]
 //
 // Todas as opções também podem vir de variáveis de ambiente
-// (ADDRESS, DATABASE_URL, JWT_SECRET); a flag sobrescreve o ambiente.
+// (ADDRESS, DATABASE_URL, JWT_SECRET, FRONTEND_URL, GOOGLE_CLIENT_ID,
+// GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL); a flag sobrescreve o ambiente.
 package main
 
 import (
@@ -62,10 +63,14 @@ subcomandos:
   migrate [up|down|status]  aplica/desfaz migrations
   openapi                   imprime a spec OpenAPI 3 (YAML) no stdout
 
-flags (ou env ADDRESS / DATABASE_URL / JWT_SECRET):
-  --address        endereço HTTP (padrão localhost:8080)
-  --database-url   string de conexão do Postgres
-  --jwt-secret     segredo para assinar os JWTs
+flags (ou as env vars equivalentes em maiúsculas, ex. DATABASE_URL):
+  --address                endereço HTTP (padrão localhost:8080)
+  --database-url           string de conexão do Postgres
+  --jwt-secret             segredo para assinar os JWTs
+  --frontend-url           origem do frontend (padrão http://localhost:5173)
+  --google-client-id       client ID do OAuth2 do Google (opcional)
+  --google-client-secret   client secret do OAuth2 do Google (opcional)
+  --google-redirect-url    redirect URI registrado no Google (opcional)
 `)
 }
 
@@ -85,7 +90,18 @@ func cmdRun(args []string) error {
 	}
 	defer db.Close()
 
-	router, _ := httpapi.NewRouter(&httpapi.Server{Store: store.New(db), JWTSecret: cfg.JWTSecret})
+	router, _ := httpapi.NewRouter(&httpapi.Server{
+		Store:              store.New(db),
+		JWTSecret:          cfg.JWTSecret,
+		FrontendURL:        cfg.FrontendURL,
+		GoogleClientID:     cfg.GoogleClientID,
+		GoogleClientSecret: cfg.GoogleClientSecret,
+		GoogleRedirectURL:  cfg.GoogleRedirectURL,
+	})
+
+	if !cfg.GoogleEnabled() {
+		fmt.Println("aviso: login com Google desligado (defina GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REDIRECT_URL)")
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.Address,

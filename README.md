@@ -4,7 +4,7 @@ Criação e publicação de formulários, com backend em Go e frontend React.
 
 - **Backend**: Go, chi + [huma](https://huma.rocks) (a spec OpenAPI 3 é gerada
   do código), Postgres, migrations com goose, auth por e-mail/senha com
-  bcrypt e sessão JWT.
+  bcrypt, login com Google (OAuth2 + PKCE) e sessão JWT.
 - **Frontend**: React + TypeScript + Vite, shadcn/ui, TanStack Router e
   TanStack Query. O código que fala com a API é **gerado** da spec OpenAPI
   (openapi-typescript + openapi-fetch), não escrito à mão.
@@ -17,6 +17,7 @@ Criação e publicação de formulários, com backend em Go e frontend React.
   - [Como executar o backend](#como-executar-o-backend)
   - [Como executar o frontend](#como-executar-o-frontend)
 - [Configuração](#configuração)
+  - [Login com Google](#login-com-google)
 - [Banco de dados e migrations](#banco-de-dados-e-migrations)
 - [Gerando a spec OpenAPI](#gerando-a-spec-openapi)
 - [Gerando o client TypeScript](#gerando-o-client-typescript)
@@ -95,7 +96,9 @@ O backend precisa estar no ar: o Vite faz proxy de `/api` para
 ### Usando a aplicação
 
 1. Abra <http://localhost:5173>, clique em **Não tenho conta — registrar** e
-   crie um usuário (senha de no mínimo 8 caracteres).
+   crie um usuário (senha de no mínimo 8 caracteres). Se o login com Google
+   estiver configurado, o botão **Entrar com Google** também aparece —
+   veja [Login com Google](#login-com-google).
 2. **Novo formulário** → dê um título e adicione campos (texto, número,
    seleção, caixa de marcação). Campos de seleção pedem as opções separadas
    por vírgula.
@@ -112,11 +115,19 @@ Três fontes, nesta ordem de precedência (a de baixo vence):
 2. variáveis de ambiente
 3. flags de linha de comando
 
-| Flag             | Variável de ambiente | Padrão                                                        |
-| ---------------- | -------------------- | ------------------------------------------------------------- |
-| `--address`      | `ADDRESS`            | `localhost:8080`                                              |
-| `--database-url` | `DATABASE_URL`       | `postgres://forms:forms@localhost:5432/forms?sslmode=disable` |
-| `--jwt-secret`   | `JWT_SECRET`         | `dev-secret-troque-isto`                                      |
+| Flag                      | Variável de ambiente     | Padrão                                                        |
+| ------------------------- | ------------------------ | ------------------------------------------------------------- |
+| `--address`               | `ADDRESS`                | `localhost:8080`                                              |
+| `--database-url`          | `DATABASE_URL`           | `postgres://forms:forms@localhost:5432/forms?sslmode=disable` |
+| `--jwt-secret`            | `JWT_SECRET`             | `dev-secret-troque-isto`                                      |
+| `--frontend-url`          | `FRONTEND_URL`           | `http://localhost:5173`                                       |
+| `--google-client-id`      | `GOOGLE_CLIENT_ID`       | vazio (login com Google desligado)                            |
+| `--google-client-secret`  | `GOOGLE_CLIENT_SECRET`   | vazio (login com Google desligado)                            |
+| `--google-redirect-url`   | `GOOGLE_REDIRECT_URL`    | vazio (login com Google desligado)                            |
+
+As três últimas são **opcionais**: sem elas o projeto sobe normalmente, o
+botão "Entrar com Google" não aparece e as rotas `/auth/google*` respondem
+`503`.
 
 Flags e env podem ser combinados — aqui o banco vem do ambiente e o
 endereço da flag:
@@ -137,6 +148,60 @@ make run
 
 O frontend tem seu próprio `web/.env.example` (`VITE_API_URL`), opcional:
 sem ele, o Vite faz proxy de `/api` para `http://localhost:8080`.
+
+### Login com Google
+
+O login por e-mail e senha funciona sem configuração nenhuma. Para ligar
+também o login com Google:
+
+**1. Criar as credenciais no Google Cloud Console**
+
+1. Abra o [Google Cloud Console](https://console.cloud.google.com/) e
+   selecione (ou crie) um projeto.
+2. **APIs e serviços → Tela de permissão OAuth**: escolha o tipo
+   *Externo*, preencha nome do app e e-mail de suporte. Enquanto o app
+   estiver em modo *Teste*, só as contas listadas em **Usuários de teste**
+   conseguem entrar — adicione a sua ali.
+3. **APIs e serviços → Credenciais → Criar credenciais → ID do cliente
+   OAuth**, tipo **Aplicativo da Web**.
+4. Em **URIs de redirecionamento autorizados**, registre exatamente:
+
+   ```
+   http://localhost:8080/auth/google/callback
+   ```
+
+   Tem que ser idêntico ao `GOOGLE_REDIRECT_URL` (o Google compara string
+   com string). Em produção, a mesma URL com o domínio real e `https`.
+5. Copie o **client ID** e o **client secret**.
+
+**2. Configurar o backend**
+
+```bash
+export GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+export GOOGLE_CLIENT_SECRET=...
+export GOOGLE_REDIRECT_URL=http://localhost:8080/auth/google/callback
+export FRONTEND_URL=http://localhost:5173   # já é o padrão
+make run
+```
+
+O `.env.example` já traz essas variáveis. O `.env` está no `.gitignore` —
+**o client secret nunca é commitado**.
+
+**3. Usar**
+
+Com as credenciais no ar, `GET /config` passa a responder
+`{"googleAuth": true}` e o botão **Entrar com Google** aparece na tela de
+login. O fluxo é:
+
+```
+frontend  →  GET /auth/google              → 302 para a tela do Google
+Google    →  GET /auth/google/callback     → 302 para o frontend
+frontend  →  /auth/callback#token=...      → guarda o JWT e vai para /forms
+```
+
+Se o e-mail da conta do Google já existir em `users`, as contas são
+vinculadas (o `google_id` é preenchido e a senha continua valendo); senão,
+um usuário novo é criado sem senha.
 
 ### Rodando o servidor diretamente
 
@@ -177,13 +242,14 @@ go run ./cmd/server migrate down   # desfaz a última
 ```
 
 Para criar uma nova migration, adicione `migrations/0000N_nome.sql` com os
-marcadores `-- +goose Up` e `-- +goose Down`. As três existentes são:
+marcadores `-- +goose Up` e `-- +goose Down`. As quatro existentes são:
 
 | Arquivo                  | Conteúdo                                   |
 | ------------------------ | ------------------------------------------ |
 | `00001_users.sql`        | `users`                                    |
 | `00002_forms.sql`        | `forms`, `form_fields`                     |
 | `00003_responses.sql`    | `responses`, `response_answers`            |
+| `00004_google_auth.sql`  | `users.google_id`, `password_hash` anulável |
 
 ## Gerando a spec OpenAPI
 
@@ -262,8 +328,11 @@ web/                 frontend React + Vite
 | Método | Rota                                | Auth | O que faz                       |
 | ------ | ----------------------------------- | ---- | ------------------------------- |
 | GET    | `/health`                           | não  | status da API e do banco        |
+| GET    | `/config`                           | não  | diz se o login com Google existe |
 | POST   | `/auth/register`                    | não  | cria conta de admin             |
 | POST   | `/auth/login`                       | não  | devolve o JWT                   |
+| GET    | `/auth/google`                      | não  | redireciona para o Google (503 se não configurado) |
+| GET    | `/auth/google/callback`             | não  | volta do Google e emite o JWT   |
 | GET    | `/auth/me`                          | sim  | usuário autenticado             |
 | GET    | `/forms`                            | sim  | lista os formulários do usuário |
 | POST   | `/forms`                            | sim  | cria formulário (draft)         |
@@ -354,6 +423,39 @@ marcadas com `Security` no huma — ou seja, a lista de rotas protegidas é
 exatamente a que a spec OpenAPI publica, sem duas listas para manter em
 sincronia.
 
+**Login com Google (OAuth2, Authorization Code + PKCE).** `GET /auth/google`
+sorteia um `state` (anti-CSRF) e um `code_verifier` (PKCE), guarda os dois
+num cookie `HttpOnly; SameSite=Lax` que vale 10 minutos e redireciona para o
+consentimento. `GET /auth/google/callback` confere o `state` contra o
+cookie, troca o código pelo token revelando o `code_verifier`, lê o perfil
+em `/oauth2/v3/userinfo` e **exige `email_verified`** — vincular contas pelo
+e-mail só é seguro com essa garantia. No fim emite exatamente o mesmo JWT do
+login por senha: nada muda no middleware nem nas rotas de formulários.
+
+PKCE não é obrigatório para um cliente com secret, mas custa poucas linhas
+(o próprio `golang.org/x/oauth2` fornece `GenerateVerifier` e
+`S256ChallengeOption`) e tira valor de um código de autorização interceptado.
+
+**Token devolvido no fragmento da URL.** A callback redireciona para
+`FRONTEND_URL/auth/callback#token=...`. Escolhi o fragmento em vez de query
+string porque o fragmento **não é enviado ao servidor**: o token não cai em
+log de acesso nem em header `Referer`. A página de callback lê o fragmento,
+guarda o token e limpa a URL com `history.replaceState`, para o token não
+ficar no histórico. A alternativa — devolver o token num cookie `HttpOnly` —
+seria mais segura (ver limitações), mas exigiria mudar também o login por
+senha, que hoje usa `localStorage`.
+
+**Credenciais ausentes não quebram o projeto.** As rotas do Google são
+sempre registradas (a spec OpenAPI é estável), mas respondem `503` quando
+faltam credenciais, e `GET /config` diz ao frontend para esconder o botão —
+assim ninguém esbarra num caminho sem saída.
+
+**Uma conta, duas formas de entrar.** `users.google_id` é `UNIQUE` e
+`password_hash` virou anulável, com um `CHECK` garantindo que toda conta tem
+pelo menos uma forma de login. A busca é por `google_id` primeiro (o `sub` do
+Google é estável, o e-mail pode mudar) e só então por e-mail, caso em que as
+contas são vinculadas.
+
 Acessar um formulário de outro usuário devolve **404**, não 403: assim a API
 não confirma a existência de ids alheios.
 
@@ -362,30 +464,27 @@ não confirma a existência de ids alheios.
 Este projeto foi feito sob um limite de tempo. O que ficou de fora, e como
 eu faria:
 
-### Login com Google (não implementado)
+### O que ficou de fora do login com Google
 
-Era explicitamente opcional no enunciado e foi o primeiro corte. Como seria:
+Implementado, mas com cortes conscientes:
 
-1. Registrar o app no Google Cloud Console e obter `client_id` e
-   `client_secret`, configurados como env vars (`GOOGLE_CLIENT_ID`,
-   `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL`).
-2. Usar `golang.org/x/oauth2/google` para o fluxo *Authorization Code com
-   PKCE*: `GET /auth/google` redireciona para o consentimento com um
-   parâmetro `state` aleatório guardado num cookie `HttpOnly` (proteção
-   contra CSRF); `GET /auth/google/callback` troca o código pelo token e lê
-   o perfil.
-3. Adicionar uma migration com `google_id TEXT UNIQUE` em `users` e tornar
-   `password_hash` anulável, já que uma conta criada pelo Google não tem
-   senha. Se o e-mail verificado já existir, vincular as contas; senão,
-   criar uma nova.
-4. A partir daí o fluxo é o mesmo de hoje: emitir o nosso próprio JWT. Nada
-   muda nas rotas de formulários.
-5. No frontend, um botão "Entrar com Google" que leva a `/auth/google`, e a
-   callback redirecionando para o frontend com o token.
+- **Sem desvincular a conta do Google** pela interface: o `google_id` entra
+  no primeiro login e não há tela para removê-lo.
+- **O token do Google é descartado** depois de ler o perfil. Não guardamos
+  access token nem refresh token porque não chamamos nenhuma outra API do
+  Google — se um dia precisássemos (Drive, Calendar), aí sim valeria
+  persistir, criptografado.
+- **Sem `id_token` verificado localmente.** Lemos o perfil chamando o
+  `userinfo` do Google por HTTPS, o que é suficiente aqui. Validar o
+  `id_token` pela JWKS do Google pouparia essa chamada de rede.
+- **Erros da callback viram texto no fragmento** (`#error=...`) e aparecem
+  numa página genérica. Um mapeamento de códigos para mensagens por caso
+  seria mais amigável.
 
 ### Outros itens fora do escopo
 
-- **Sem refresh token.** O JWT vale 24h e, quando expira, é preciso logar de
+- **Sem refresh token.** Continua fora do escopo — vale tanto para o login
+  por senha quanto para o do Google. O JWT vale 24h e, quando expira, é preciso logar de
   novo. Um refresh token em cookie `HttpOnly` seria o próximo passo, junto
   com tirar o token de acesso do `localStorage`.
 - **Token no `localStorage`.** Simples e suficiente para o teste, mas

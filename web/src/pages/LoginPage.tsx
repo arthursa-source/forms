@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
-import { api, errorMessage, setToken } from "@/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api, apiBaseUrl, errorMessage, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,17 @@ export function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // O botão do Google só aparece se o backend tiver as credenciais: sem
+  // elas /auth/google responderia 503 e o botão seria um beco sem saída.
+  const config = useQuery({
+    queryKey: ["config"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/config");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -79,6 +90,23 @@ export function LoginPage() {
               {mutation.isPending ? "Enviando..." : mode === "login" ? "Entrar" : "Criar conta"}
             </Button>
           </form>
+
+          {config.data?.googleAuth && (
+            <>
+              {/* Separador entre as duas formas de entrar. */}
+              <div className="my-4 flex items-center gap-3">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">ou</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+
+              {/* Navegação de verdade, não fetch: /auth/google responde um
+                  redirect para a tela de consentimento do Google. */}
+              <Button variant="outline" className="w-full" asChild>
+                <a href={`${apiBaseUrl}/auth/google`}>Entrar com Google</a>
+              </Button>
+            </>
+          )}
 
           <Button
             variant="link"

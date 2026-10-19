@@ -35,3 +35,27 @@ func (s *Server) registerHealth(api huma.API) {
 		return out, nil
 	})
 }
+
+// configOutput diz ao frontend o que este servidor tem ligado. Hoje só o
+// login com Google, que depende de credenciais: sem isso o frontend
+// esconde o botão em vez de mostrar um caminho que daria 503.
+type configOutput struct {
+	Body struct {
+		GoogleAuth bool `json:"googleAuth" doc:"true quando o login com Google está configurado"`
+	}
+}
+
+func (s *Server) registerConfig(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "config",
+		Method:      http.MethodGet,
+		Path:        "/config",
+		Summary:     "Configuração pública do servidor",
+		Description: "Não expõe segredo nenhum: só diz quais formas de login estão disponíveis.",
+		Tags:        []string{"system"},
+	}, func(_ context.Context, _ *struct{}) (*configOutput, error) {
+		out := &configOutput{}
+		out.Body.GoogleAuth = s.googleEnabled()
+		return out, nil
+	})
+}

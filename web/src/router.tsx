@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { getToken } from "@/lib/api";
 import { LoginPage } from "@/pages/LoginPage";
+import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { FormsListPage } from "@/pages/FormsListPage";
 import { FormEditorPage } from "@/pages/FormEditorPage";
 import { ResponsesPage } from "@/pages/ResponsesPage";
@@ -34,6 +35,13 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage,
+});
+
+// Onde a callback do Google deposita o token (no fragmento da URL).
+const authCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/auth/callback",
+  component: AuthCallbackPage,
 });
 
 const formsRoute = createRoute({
@@ -74,6 +82,7 @@ const publicFormRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
+  authCallbackRoute,
   formsRoute,
   newFormRoute,
   editFormRoute,

@@ -19,6 +19,13 @@ import (
 type Server struct {
 	Store     *store.Store
 	JWTSecret string
+	// Origem do frontend, para onde a callback do Google volta.
+	FrontendURL string
+	// Credenciais do OAuth2 do Google. Vazias = login com Google
+	// desligado (ver internal/httpapi/google.go).
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
 }
 
 // NewRouter devolve o roteador pronto para servir e a instância huma
@@ -45,7 +52,9 @@ func NewRouter(s *Server) (chi.Router, huma.API) {
 	api.UseMiddleware(s.authMiddleware(api))
 
 	s.registerHealth(api)
+	s.registerConfig(api)
 	s.registerAuth(api)
+	s.registerGoogleAuth(api)
 	s.registerForms(api)
 	s.registerResponses(api)
 	s.registerPublic(api)

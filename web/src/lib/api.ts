@@ -11,6 +11,11 @@ import type { paths } from "@/api/schema";
 // vite.config.ts), então o frontend nunca fala com outra origem.
 const baseUrl = import.meta.env.VITE_API_URL ?? "/api";
 
+// Exportada porque o login com Google não é uma chamada fetch: o
+// navegador NAVEGA até /auth/google, que responde um redirect para o
+// Google. Por isso precisamos montar a URL à mão.
+export const apiBaseUrl = baseUrl;
+
 const TOKEN_KEY = "forms.token";
 
 export function getToken(): string | null {
