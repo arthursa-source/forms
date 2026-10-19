@@ -8,6 +8,7 @@
 # frontend
 web/node_modules/
 web/dist/
+web/tsconfig.tsbuildinfo
 
 # artefatos gerados (a spec é commitada, o client não)
 web/src/api/schema.d.ts
